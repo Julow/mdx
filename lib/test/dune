@@ -1,0 +1,5 @@
+(library
+ (name mdx_test)
+ (public_name mdx.test)
+ (preprocess (action (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file})))
+ (libraries mdx mdx.top))
