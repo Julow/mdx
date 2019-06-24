@@ -720,7 +720,8 @@ let patch_env () =
   end
   in ()
 
-let init ~verbose:v ~silent:s ~verbose_findlib () =
+let init ~verbose:v ~silent:s ~verbose_findlib ~include_dirs () =
+  Clflags.include_dirs := include_dirs @ !Clflags.include_dirs;
   Clflags.real_paths := false;
   Toploop.set_paths ();
   Compmisc.init_path true;

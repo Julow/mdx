@@ -262,10 +262,10 @@ let update_file_or_block ?root ppf md_file ml_file block direction =
 
 let run_exn ()
     non_deterministic not_verbose syntax silent verbose_findlib prelude
-    prelude_str file section root direction force_output
+    prelude_str file section root direction force_output include_dirs
   =
   let c =
-    Mdx_top.init ~verbose:(not not_verbose) ~silent ~verbose_findlib ()
+    Mdx_top.init ~verbose:(not not_verbose) ~silent ~verbose_findlib ~include_dirs ()
   in
   let section = match section with
     | None   -> None
@@ -370,11 +370,12 @@ let run_exn ()
 
 let run ()
     non_deterministic not_verbose syntax silent verbose_findlib prelude
-    prelude_str file section root direction
+    prelude_str file section root direction force_output include_dirs
+  : int
   =
     try
     run_exn () non_deterministic not_verbose syntax silent verbose_findlib
-      prelude prelude_str file section root direction
+      prelude prelude_str file section root direction force_output include_dirs
     with Failure f -> prerr_endline f; exit 1
  
 (**** Cmdliner ****)
@@ -388,7 +389,7 @@ let cmd =
   Term.(pure run
         $ Cli.setup $ Cli.non_deterministic $ Cli.not_verbose $ Cli.syntax
         $ Cli.silent $ Cli.verbose_findlib $ Cli.prelude $ Cli.prelude_str
-        $ Cli.file $ Cli.section $ Cli.root $ Cli.direction $ Cli.force_output),
+        $ Cli.file $ Cli.section $ Cli.root $ Cli.direction $ Cli.force_output $ Cli.include_dirs),
   Term.info "ocaml-mdx-test" ~version:"%%VERSION%%" ~doc ~exits ~man
 
 let main () = Term.(exit_status @@ eval cmd)

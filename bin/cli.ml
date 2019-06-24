@@ -88,6 +88,10 @@ let force_output =
   let doc = "Force generation of corrected file (even if there was no diff)" in
   Arg.(value & flag & info ["force-output"] ~doc)
 
+let include_dirs =
+  let doc = "Directory to look for compiled files. Can be provided several time. Similar to OCaml's -I option" in
+  Arg.(value & opt_all string [] & info ["I"] ~doc ~docs:"DIR")
+
 let setup_log style_renderer level =
   Fmt_tty.setup_std_outputs ?style_renderer ();
   Logs.set_level level;
