@@ -29,6 +29,17 @@ let prepend_root r b = match r with
   | None   -> b
   | Some r -> Filename.concat r b
 
+let findlib_conf_gen_rule =
+  let target = "findlib.conf" in
+  let action =
+    {|(write-file %{target} "path=\"%{project_root}/_build/install/%{context_name}/lib\"")|}
+  in
+  Printf.sprintf
+    ("(rule\n"
+     ^^ " (target %s)\n"
+     ^^ " (action %s))\n")
+    target action
+
 let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires ~duniverse_mode options =
   let ml_files = String.Set.elements ml_files in
   let ml_files = List.map (prepend_root root) ml_files in
@@ -74,28 +85,33 @@ let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires ~duniverse_
     | [] -> ""
     | s  -> String.concat ~sep:"\n" ("" :: s)
   in
-  let duniverse_mode_opt =
+  let run_action arg =
+    let run =
+      Fmt.strf "(run ocaml-mdx test %a %s%s%%{x})"
+        Fmt.(list ~sep:(unit " ") string) options
+        arg root
+    in
     if duniverse_mode then
-      "--duniverse-mode %{project_root}/_build/install/%{context_name}/lib "
+      Fmt.strf "(setenv OCAMLFIND_CONF %%{conf} %s)" run
     else
-      ""
+      run
   in
+  let conf_dep = if duniverse_mode then "\n         (:conf findlib.conf)" else "" in
   let pp name arg =
     Fmt.pr
       "\
 (alias\n\
 \ (name   %s)\n\
-\ (deps   (:x %s)\n\
+\ (deps   (:x %s)%s\n\
 \         (package mdx)%s)\n\
 \ (action (progn\n\
-\           (run ocaml-mdx test %s%a %s%s%%{x})\n%a\n\
+\           %s\n%a\n\
 \           (diff? %%{x} %%{x}.corrected))))\n"
       name
       md_file
+      conf_dep
       deps
-      duniverse_mode_opt
-      Fmt.(list ~sep:(unit " ") string) options
-      arg root
+      (run_action arg)
       (Fmt.list ~sep:Fmt.cut pp_ml_diff) var_names
   in
   pp "runtest" "";
@@ -153,6 +169,10 @@ let run () md_file section direction prelude prelude_str root duniverse_mode =
       List.map (Fmt.to_to_string pp_prelude_str) prelude_str @
       [Fmt.to_to_string pp_direction direction]
     in
+    if duniverse_mode then
+      ( Fmt.pr "%s" findlib_conf_gen_rule;
+        Fmt.pr "\n"
+      );
     print_rule ~md_file ~prelude ~nd ~ml_files ~dirs ~root ~requires
       ~duniverse_mode options;
     file_contents
