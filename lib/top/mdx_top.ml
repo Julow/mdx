@@ -720,7 +720,15 @@ let patch_env () =
   end
   in ()
 
-let init ~verbose:v ~silent:s ~verbose_findlib () =
+type duniverse_mode = {
+  search_path : string list;
+}
+
+let init ?duniverse_mode ~verbose:v ~silent:s ~verbose_findlib () =
+  (match duniverse_mode with
+   | Some { search_path } ->
+     Findlib.init_manually ~install_dir:"" ~meta_dir:"none" ~search_path ()
+   | None -> ());
   Clflags.real_paths := false;
   Toploop.set_paths ();
   Mdx.Compat.init_path ();

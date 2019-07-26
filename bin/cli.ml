@@ -96,3 +96,10 @@ let setup_log style_renderer level =
 
 let setup =
   Term.(const setup_log $ Fmt_cli.style_renderer () $ Logs_cli.level ())
+
+let duniverse_mode =
+  let doc =
+    "Change library loading code to work with duniverse. \
+     $(b,PATH) is findlib's search path."
+  in
+  Arg.(value & opt (some string) None & info ["duniverse-mode"] ~doc ~docv:"PATH")
