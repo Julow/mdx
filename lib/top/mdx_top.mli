@@ -22,17 +22,7 @@ open Result
 type t
 (** The type for configuration values. *)
 
-type duniverse_mode = {
-  search_path : string list;
-}
-
-val init:
-  ?duniverse_mode:duniverse_mode ->
-  verbose:bool ->
-  silent:bool ->
-  verbose_findlib:bool ->
-  unit ->
-  t
+val init: verbose:bool -> silent:bool -> verbose_findlib:bool -> unit -> t
 (** [init ()] is a new configuration value. *)
 
 val eval: t -> string list -> (string list, string list) result
