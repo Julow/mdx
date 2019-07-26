@@ -29,7 +29,7 @@ let prepend_root r b = match r with
   | None   -> b
   | Some r -> Filename.concat r b
 
-let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires options =
+let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires ~duniverse_mode options =
   let ml_files = String.Set.elements ml_files in
   let ml_files = List.map (prepend_root root) ml_files in
   let dirs = match root with
@@ -74,6 +74,12 @@ let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires options =
     | [] -> ""
     | s  -> String.concat ~sep:"\n" ("" :: s)
   in
+  let duniverse_mode_opt =
+    if duniverse_mode then
+      "--duniverse-mode %{project_root}/_build/install/%{context_name}/lib "
+    else
+      ""
+  in
   let pp name arg =
     Fmt.pr
       "\
@@ -82,11 +88,12 @@ let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires options =
 \ (deps   (:x %s)\n\
 \         (package mdx)%s)\n\
 \ (action (progn\n\
-\           (run ocaml-mdx test %a %s%s%%{x})\n%a\n\
+\           (run ocaml-mdx test %s%a %s%s%%{x})\n%a\n\
 \           (diff? %%{x} %%{x}.corrected))))\n"
       name
       md_file
       deps
+      duniverse_mode_opt
       Fmt.(list ~sep:(unit " ") string) options
       arg root
       (Fmt.list ~sep:Fmt.cut pp_ml_diff) var_names
@@ -104,7 +111,7 @@ let pp_prelude_str fmt s = Fmt.pf fmt "--prelude-str=%S" s
 
 let add_opt e s = match e with None -> s | Some e -> String.Set.add e s
 
-let run () md_file section direction prelude prelude_str root =
+let run () md_file section direction prelude prelude_str root duniverse_mode =
   let section = match section with
     | None   -> None
     | Some p -> Some (Re.Perl.compile_pat p)
@@ -146,7 +153,8 @@ let run () md_file section direction prelude prelude_str root =
       List.map (Fmt.to_to_string pp_prelude_str) prelude_str @
       [Fmt.to_to_string pp_direction direction]
     in
-    print_rule ~md_file ~prelude ~nd ~ml_files ~dirs ~root ~requires options;
+    print_rule ~md_file ~prelude ~nd ~ml_files ~dirs ~root ~requires
+      ~duniverse_mode options;
     file_contents
   in
   Mdx.run md_file ~f:on_file;
@@ -154,9 +162,16 @@ let run () md_file section direction prelude prelude_str root =
 
 open Cmdliner
 
+let duniverse_mode =
+  let doc =
+    "Run mdx in a duniverse-compatible mode. \
+     Expect all toplevel dependencies to be available in your duniverse folder."
+  in
+  Arg.(value & flag & info ["duniverse-mode"] ~doc)
+
 let cmd =
   let doc = "Produce dune rules to synchronize markdown and OCaml files." in
   Term.(pure run
         $ Cli.setup $ Cli.file $ Cli.section $ Cli.direction
-        $ Cli.prelude $ Cli.prelude_str $ Cli.root),
+        $ Cli.prelude $ Cli.prelude_str $ Cli.root $ duniverse_mode),
   Term.info "rule" ~doc
