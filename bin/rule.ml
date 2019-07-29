@@ -75,8 +75,9 @@ let print_rule ~nd ~prelude ~md_file ~ml_files ~dirs ~root ~requires ~duniverse_
   in
   let root = match root with None -> "" | Some r -> Fmt.strf "--root=%s " r in
   let deps =
+    let require_deps = if duniverse_mode then requires else [] in
     let x =
-      List.map (Fmt.to_to_string pp_package_deps) requires @
+      List.map (Fmt.to_to_string pp_package_deps) require_deps @
       List.map (Fmt.to_to_string pp_ml_deps) (List.combine var_names ml_files) @
       List.map (Fmt.to_to_string pp_dir_deps) dirs @
       prelude
