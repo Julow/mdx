@@ -128,6 +128,7 @@ let pp_prelude_str fmt s = Fmt.pf fmt "--prelude-str=%S" s
 let add_opt e s = match e with None -> s | Some e -> String.Set.add e s
 
 let run () md_file section direction prelude prelude_str root duniverse_mode =
+  let open Rresult.R.Infix in
   let section = match section with
     | None   -> None
     | Some p -> Some (Re.Perl.compile_pat p)
@@ -138,7 +139,7 @@ let run () md_file section direction prelude prelude_str root duniverse_mode =
     | Some re, Some s -> Re.execp re (snd s)
   in
   let on_item acc = function
-    | Mdx.Section _ | Text _ -> acc
+    | Mdx.Section _ | Text _ -> Ok acc
     | Block b when active b ->
       let files, dirs, nd, requires = acc in
       let requires =
@@ -156,26 +157,39 @@ let run () md_file section direction prelude prelude_str root duniverse_mode =
         |> String.Set.union source_trees
       in
       let files = add_opt (Mdx.Block.file b) files in
+      Mdx.Block.required_libraries b >>| fun libs ->
+      let requires = Mdx.Library.Set.union requires libs in
       files, dirs, nd, requires
-    | Block _ -> acc
+    | Block _ -> Ok acc
   in
   let on_file file_contents items =
-    let ml_files, dirs, nd, requires =
-      let empty = String.Set.empty in
-      List.fold_left on_item (empty, empty, false, empty) items
+    let empty = String.Set.empty in
+    let req_res =
+      Mdx.Util.Result.List.fold ~f:on_item ~init:(empty, empty, false, Mdx.Library.Set.empty) items
     in
-    let options =
-      List.map (Fmt.to_to_string pp_prelude) prelude @
-      List.map (Fmt.to_to_string pp_prelude_str) prelude_str @
-      [Fmt.to_to_string pp_direction direction]
-    in
-    if duniverse_mode then
-      ( Fmt.pr "%s" findlib_conf_gen_rule;
-        Fmt.pr "\n"
-      );
-    print_rule ~md_file ~prelude ~nd ~ml_files ~dirs ~root ~requires
-      ~duniverse_mode options;
-    file_contents
+    match req_res with
+    | Error s ->
+      Printf.eprintf "Fatal error while parsing block: %s" s;
+      exit 1
+    | Ok (ml_files, dirs, nd, requires) ->
+      let options =
+        List.map (Fmt.to_to_string pp_prelude) prelude @
+        List.map (Fmt.to_to_string pp_prelude_str) prelude_str @
+        [Fmt.to_to_string pp_direction direction]
+      in
+      let requires =
+        Mdx.Library.Set.fold
+          (fun {base_name; _} acc -> String.Set.add base_name acc)
+          requires
+          empty
+      in
+      if duniverse_mode then
+        ( Fmt.pr "%s" findlib_conf_gen_rule;
+          Fmt.pr "\n"
+        );
+      print_rule ~md_file ~prelude ~nd ~ml_files ~dirs ~root ~requires
+        ~duniverse_mode options;
+      file_contents
   in
   Mdx.run md_file ~f:on_file;
   0

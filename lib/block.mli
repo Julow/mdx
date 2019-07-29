@@ -97,6 +97,9 @@ val unset_variables: t -> string list
 val required_packages: t -> string list
 (** [required_packages t] is the names of the required packages *)
 
+val required_libraries: t -> (Library.Set.t, string) Result.result
+(** [required_packages t] is the names of the required packages *)
+
 val skip: t -> bool
 (** [skip t] is true iff [skip] is in the labels of [t]. *)
 
@@ -140,3 +143,6 @@ val require_from_line : string -> (Library.Set.t, string) Result.result
 (** [require_from_line line] returns the set of libraries imported by the
     #require statement on [line] or an empty set if [line] is not a require
     statement. *)
+
+val require_from_lines : string list -> (Library.Set.t, string) Result.result
+(** Same as [require_from_line] but aggregated over several lines *)
