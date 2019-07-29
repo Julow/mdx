@@ -135,3 +135,8 @@ val labels_of_string:
   string ->
   (string * ([`Eq | `Neq | `Gt | `Ge | `Lt | `Le] * string) option) list
 (** [labels_of_string s] cuts [s] into a list of labels. *)
+
+val require_from_line : string -> (Library.Set.t, string) Result.result
+(** [require_from_line line] returns the set of libraries imported by the
+    #require statement on [line] or an empty set if [line] is not a require
+    statement. *)
