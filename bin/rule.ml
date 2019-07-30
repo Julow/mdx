@@ -128,6 +128,35 @@ let pp_prelude_str fmt s = Fmt.pf fmt "--prelude-str=%S" s
 
 let add_opt e s = match e with None -> s | Some e -> String.Set.add e s
 
+let aggregate_requires ~require_from l =
+  let open Rresult.R.Infix in
+  Mdx.Util.Result.List.fold
+    ~f:(fun acc x -> require_from x >>| Mdx.Library.Set.union acc)
+    ~init:Mdx.Library.Set.empty
+    l
+
+let requires_from_prelude_str prelude_str_list =
+  let require_from prelude_str =
+    let (_, prelude) = Mdx.Prelude.env_and_file prelude_str in
+    let lines = String.fields ~is_sep:(function '\n' | '\r' -> true | _ -> false) prelude in
+    Mdx.Block.require_from_lines lines
+  in
+  aggregate_requires ~require_from prelude_str_list
+
+let requires_from_prelude prelude_list =
+  let require_from prelude =
+    let (_, prelude) = Mdx.Prelude.env_and_file prelude in
+    let lines = Mdx.Util.File.read_lines prelude in
+    Mdx.Block.require_from_lines lines
+  in
+  aggregate_requires ~require_from prelude_list
+
+let requires_to_packages library_set =
+  Mdx.Library.Set.fold
+    (fun {base_name; _} acc -> String.Set.add base_name acc)
+    library_set
+    String.Set.empty
+
 let run () md_file section direction prelude prelude_str root duniverse_mode =
   let open Rresult.R.Infix in
   let section = match section with
@@ -166,7 +195,10 @@ let run () md_file section direction prelude prelude_str root duniverse_mode =
   let on_file file_contents items =
     let empty = String.Set.empty in
     let req_res =
-      Mdx.Util.Result.List.fold ~f:on_item ~init:(empty, empty, false, Mdx.Library.Set.empty) items
+      requires_from_prelude prelude >>= fun prelude_requires ->
+      requires_from_prelude_str prelude_str >>= fun prelude_str_requires ->
+      let requires = Mdx.Library.Set.union prelude_requires prelude_str_requires in
+      Mdx.Util.Result.List.fold ~f:on_item ~init:(empty, empty, false, requires) items
     in
     match req_res with
     | Error s ->
@@ -178,12 +210,7 @@ let run () md_file section direction prelude prelude_str root duniverse_mode =
         List.map (Fmt.to_to_string pp_prelude_str) prelude_str @
         [Fmt.to_to_string pp_direction direction]
       in
-      let requires =
-        Mdx.Library.Set.fold
-          (fun {base_name; _} acc -> String.Set.add base_name acc)
-          requires
-          empty
-      in
+      let requires = requires_to_packages requires in
       if duniverse_mode then
         ( Fmt.pr "%s" findlib_conf_gen_rule;
           Fmt.pr "\n"
