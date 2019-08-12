@@ -32,7 +32,7 @@ let prepend_root r b = match r with
 let findlib_conf_gen_rule =
   let target = "findlib.conf" in
   let action =
-    {|(write-file %{target} "path=\"%{project_root}/_build/install/%{context_name}/lib\"")|}
+    {|(write-file %{target} "")|}
   in
   Printf.sprintf
     ("(rule\n"
