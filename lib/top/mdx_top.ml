@@ -721,6 +721,7 @@ let patch_env () =
   in ()
 
 let init ~verbose:v ~silent:s ~verbose_findlib () =
+  Findlib.init_manually ~install_dir:"" ~meta_dir:"" ~search_path:[] ();
   Clflags.real_paths := false;
   Toploop.set_paths ();
   Mdx.Compat.init_path ();
