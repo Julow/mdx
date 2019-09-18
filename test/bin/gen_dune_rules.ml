@@ -30,6 +30,12 @@ let read_file filename =
     close_in chan;
     List.rev !lines
 
+let expected_file file =
+  let e = file ^ ".expected" in
+  if not (Sys.file_exists e) then
+    Fmt.failwith "No %s file found when generating an expect rule" e;
+  e
+
 (* Copied from Filename (stdlib) for pre-4.04 compatibility *)
 let chop_extension name =
   let is_dir_sep s i = match Sys.os_type with
@@ -71,11 +77,7 @@ let test_fixpoint_rule file =
 (* Tests that the output of 'ocaml-mdx test [options] <file>' is equal to the
    contents of '<file>.expected'. *)
 let test_expect_rule file =
-  let expected_file = file ^ ".expected" in
-  if not (Sys.file_exists expected_file) then
-    failwith (
-      Fmt.strf "No %s file found when generating an expect rule" expected_file
-    );
+  let _ = expected_file file in
   let options = options_of_file file in
   Fmt.pr
     {|
@@ -93,6 +95,27 @@ let test_expect_rule file =
     expected_file
     pp_options options
 
+let test_failures_rule file =
+  let expected_file = expected_file file in
+  let options = options_of_file file in
+  let target_file = file ^ ".actual" in
+  Fmt.pr
+    {|
+(rule
+  (targets %s)
+  (action
+    (with-outputs-to %%{targets}
+      (system "%%{bin:ocaml-mdx} test %a %%{dep:%s} || echo"))))
+
+(alias
+  (name runtest)
+  (action
+    (diff %s %s)))
+|}
+    target_file
+    pp_options options file
+    target_file expected_file
+
 let rule_gen rule_type () =
   Sys.readdir "."
   |> Array.to_list
@@ -101,6 +124,7 @@ let rule_gen rule_type () =
   |> List.iter (match rule_type with
       | `Test_fixpoint -> test_fixpoint_rule
       | `Test_expect -> test_expect_rule
+      | `Test_failures -> test_failures_rule
     )
 
 open Cmdliner
@@ -108,7 +132,8 @@ open Cmdliner
 let cmds =
   Term.[
     const (rule_gen `Test_fixpoint) $ const (), info "test_fixpoint";
-    const (rule_gen `Test_expect) $ const (), info "test_expect"
+    const (rule_gen `Test_expect) $ const (), info "test_expect";
+    const (rule_gen `Test_failures) $ const (), info "test_failures";
   ]
 
 let default =
