@@ -26,7 +26,7 @@ val root : [> `Root of string option ] t
 
 val force_output : [> `Force_output of bool ] t
 
-type output = File of string | Stdout
+type output = [ `File of string | `Stdout ]
 
 val output : [> `Output of output option ] t
 (** A --output option to overwrite the command output.

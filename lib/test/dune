@@ -1,0 +1,5 @@
+(library
+ (name mdx_test)
+ (public_name mdx.test)
+ (modes byte)
+ (libraries mdx mdx.top))

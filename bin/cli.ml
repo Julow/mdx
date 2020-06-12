@@ -100,19 +100,19 @@ let force_output =
     (fun x -> `Force_output x)
     Arg.(value & flag & info [ "force-output" ] ~doc)
 
-type output = File of string | Stdout
+type output = [ `File of string | `Stdout ]
 
 let output_conv =
   let sparse, sprint = Arg.string in
   let parse s =
     match sparse s with
-    | `Ok "-" -> Ok Stdout
-    | `Ok s -> Ok (File s)
+    | `Ok "-" -> Ok `Stdout
+    | `Ok s -> Ok (`File s)
     | `Error msg -> Error (`Msg msg)
   in
   let print fmt = function
-    | Stdout -> sprint fmt "-"
-    | File s -> sprint fmt s
+    | `Stdout -> sprint fmt "-"
+    | `File s -> sprint fmt s
   in
   Arg.conv ~docv:"OUTPUT" (parse, print)
 
