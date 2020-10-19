@@ -13,4 +13,4 @@ type generator = {
   pp_failure_action : Format.formatter -> dir -> unit;
 }
 
-val run : generator -> unit
+val run : ?enabled_if:string -> generator -> unit

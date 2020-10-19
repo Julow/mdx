@@ -2,6 +2,7 @@
  (target test-case.md.corrected)
  (deps
   (package mdx))
+ (enabled_if (<> %{os_type} Win32))
  (action
   (setenv
    MDX_RUN_NON_DETERMINISTIC
@@ -10,5 +11,6 @@
 
 (rule
  (alias runtest)
+ (enabled_if (<> %{os_type} Win32))
  (action
   (diff test-case.md.expected test-case.md.corrected)))

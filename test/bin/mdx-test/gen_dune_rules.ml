@@ -37,4 +37,4 @@ let pp_failure_action fmt dir =
     (system "! ocaml-mdx test %a%s")))|}
     dir.dir_name pp_options dir.options dir.test_file
 
-let () = run { pp_expect_action; pp_failure_action }
+let () = run ~enabled_if:"(<> %{os_type} Win32)" { pp_expect_action; pp_failure_action }
