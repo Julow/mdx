@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        ocaml-version:
+          # Don't include every versions. OCaml-CI already covers that
+          - 4.11.1
+      fail-fast: false # We want to know precisely which build failed
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Clone the project
+      - uses: actions/checkout@v2
+
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.opam
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}-opam
+
+      - name: Setup OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          opam pin add -n .
+          opam depext -y -t mdx
+          opam install --deps-only -t mdx
+
+      - name: dune build
+        run: opam exec -- dune build
+
+      - name: dune runtest
+        run: opam exec -- dune runtest
