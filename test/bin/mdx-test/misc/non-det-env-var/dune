@@ -7,7 +7,7 @@
   (setenv
    MDX_RUN_NON_DETERMINISTIC
    true
-   (run ocaml-mdx test --force-output %{dep:test-case.md}))))
+   (run ocaml-mdx-test --force-output %{dep:test-case.md}))))
 
 (rule
  (alias runtest)

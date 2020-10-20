@@ -6,7 +6,7 @@
  (action
   (with-stdout-to
    %{target}
-   (run ocaml-mdx test --output - %{md}))))
+   (run ocaml-mdx-test --output - %{md}))))
 
 (rule
  (alias runtest)
@@ -22,7 +22,7 @@
   (package mdx)
   (:md test-case.md))
  (action
-  (run ocaml-mdx test --force-output --output %{target} %{md})))
+  (run ocaml-mdx-test --force-output --output %{target} %{md})))
 
 (rule
  (alias runtest)
@@ -38,7 +38,7 @@
   (package mdx)
   (:md test-case.md))
  (action
-  (run ocaml-mdx test --force-output %{md})))
+  (run ocaml-mdx-test --force-output %{md})))
 
 (rule
  (alias runtest)

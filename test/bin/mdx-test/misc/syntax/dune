@@ -4,7 +4,7 @@
   (package mdx)
   (:md test-case.md))
  (action
-  (run ocaml-mdx test --output %{target} %{md})))
+  (run ocaml-mdx-test --output %{target} %{md})))
 
 (rule
  (alias runtest)
@@ -21,7 +21,7 @@
   (:md test-case.t))
  (enabled_if (<> %{os_type} Win32))
  (action
-  (run ocaml-mdx test --output %{target} %{md})))
+  (run ocaml-mdx-test --output %{target} %{md})))
 
 (rule
  (alias runtest)
@@ -38,7 +38,7 @@
   (package mdx)
   (:md test-case-md.ext))
  (action
-  (run ocaml-mdx test %{md} --output %{target} --syntax markdown)))
+  (run ocaml-mdx-test %{md} --output %{target} --syntax markdown)))
 
 (rule
  (alias runtest)
@@ -55,7 +55,7 @@
   (:md test-case-cram.ext))
  (enabled_if (<> %{os_type} Win32))
  (action
-  (run ocaml-mdx test %{md} --output %{target} --syntax cram)))
+  (run ocaml-mdx-test %{md} --output %{target} --syntax cram)))
 
 (rule
  (alias runtest)
