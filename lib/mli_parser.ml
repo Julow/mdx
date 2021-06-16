@@ -2,7 +2,7 @@ open! Compat
 module Loc = Odoc_parser.Loc
 
 module Code_block = struct
-  type t = { location : Loc.span; contents : string }
+  type t = { location : Loc.span; metadata : string option; contents : string }
 end
 
 let drop_last lst =
@@ -79,13 +79,18 @@ let extract_code_blocks ~(location : Lexing.position) ~docstring =
     List.map
       (fun block ->
         match Loc.value block with
-        | `Code_block (_metadata, { Odoc_parser.Loc.value = contents; _ }) ->
+        | `Code_block (metadata, { Odoc_parser.Loc.value = contents; _ }) ->
             let location =
               if location.pos_lnum = block.location.start.line then
                 account_for_docstring_open_token block.location
               else block.location
             in
-            [ { Code_block.location; contents } ]
+            let metadata =
+              match metadata with
+              | None -> None
+              | Some { Odoc_parser.Loc.value; _ } -> Some value
+            in
+            [ { Code_block.location; metadata; contents } ]
         | `List (_, _, lists) -> List.map acc lists |> List.concat
         | _ -> [])
       blocks
@@ -149,6 +154,17 @@ let docstring_code_blocks str =
     (docstrings (Lexing.from_string str))
   |> List.concat
 
+let parse_metadata s =
+  match String.index_opt s ' ' with
+  | None -> Ok (Block.Header.of_string s, [])
+  | Some i -> (
+      let header = String.sub s 0 i
+      and labels = String.sub s (i + 1) (String.length s - i - 1) in
+      let header = Block.Header.of_string header in
+      match Label.of_string labels with
+      | Ok labels -> Ok (header, labels)
+      | Error _ as e -> e)
+
 let parse_mli file_contents =
   (* Find the locations of the code blocks within [file_contents], then slice it up into
      [Text] and [Block] parts by using the starts and ends of those blocks as
@@ -165,10 +181,22 @@ let parse_mli file_contents =
         in
         let column = code_block.location.start.column in
         let contents = Compat.String.split_on_char '\n' code_block.contents in
+        let header, labels, opening =
+          match code_block.metadata with
+          | Some s -> (
+              match parse_metadata s with
+              | Ok (hd, lbl) -> (hd, lbl, "{@" ^ s ^ "[")
+              | Error msgs ->
+                  let (`Msg msg) = List.hd msgs in
+                  failwith msg)
+          | None ->
+              (* Blocks with no header are ocaml by default. *)
+              (Some OCaml, [], "{[")
+        in
         let block =
           match
-            Block.mk ~loc ~section:None ~labels:[] ~header:(Some OCaml)
-              ~contents ~legacy_labels:false ~errors:[]
+            Block.mk ~loc ~section:None ~labels ~header ~contents
+              ~legacy_labels:false ~errors:[]
           with
           | Ok block -> Document.Block block
           | Error _ -> failwith "Error creating block"
@@ -178,7 +206,7 @@ let parse_mli file_contents =
           else Astring.String.v ~len:column (fun _ -> ' ')
         in
         cursor := code_block.location.end_;
-        [ pre_text; Text "{["; block; Text (hpad ^ "]}") ])
+        [ pre_text; Text opening; block; Text (hpad ^ "]}") ])
       code_blocks
     |> List.concat
   in
